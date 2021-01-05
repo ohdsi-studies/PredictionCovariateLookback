@@ -1,19 +1,18 @@
-[Study title]
+Prediction Covariate Lookback
 =============
 
 <img src="https://img.shields.io/badge/Study%20Status-Repo%20Created-lightgray.svg" alt="Study Status: Repo Created">
 
-- Analytics use case(s): **-**
-- Study type: **-**
+- Analytics use case(s): **PatientLevelPrediction**
+- Study type: **Methods Research**
 - Tags: **-**
-- Study lead: **-**
+- Study lead: **Jill Hardin**
 - Study lead forums tag: **[[Lead tag]](https://forums.ohdsi.org/u/[Lead tag])**
-- Study start date: **-**
+- Study start date: **June 2019**
 - Study end date: **-**
 - Protocol: **-**
 - Publications: **-**
 - Results explorer: **-**
 
-[Description (single paragraph)]
+This study aims to empirically investigate the impact of covariate lookback on internal and external discriminative performance when developing patient-level prediction models.
 
-[You can add other text at this point]
