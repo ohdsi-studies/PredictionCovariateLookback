@@ -3,7 +3,7 @@ Prediction Covariate Lookback
 
 <img src="https://img.shields.io/badge/Study%20Status-Repo%20Created-lightgray.svg" alt="Study Status: Repo Created">
 
-- Analytics use case(s): **PatientLevelPrediction**
+- Analytics use case(s): **Patient-Level Prediction**
 - Study type: **Methods Research**
 - Tags: **-**
 - Study lead: **Jill Hardin**
