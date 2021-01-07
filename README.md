@@ -7,7 +7,7 @@ Prediction Covariate Lookback
 - Study type: **Methods Research**
 - Tags: **-**
 - Study lead: **Jill Hardin**
-- Study lead forums tag: **[[Lead tag]](https://forums.ohdsi.org/u/[Lead tag])**
+- Study lead forums tag: **[jill_hardin](https://forums.ohdsi.org/u/jill_hardin)**
 - Study start date: **June 2019**
 - Study end date: **-**
 - Protocol: **-**
