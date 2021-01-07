@@ -1,0 +1,37 @@
+Package: PredictionCovariateLookback
+Type: Package
+Title: Investigating Covariate Lookback
+Version: 0.0.1
+Author: Jenna Reps [aut, cre]
+Maintainer: Jenna M Reps <reps@ohdsi.org>
+Description: A Study Investigating Covariate Lookback Length Impact On Discrimination
+Depends:
+    DatabaseConnector
+Imports:
+    SqlRender,
+    Cyclops,
+    FeatureExtraction,
+    PatientLevelPrediction,
+    ggplot2,
+    OhdsiSharing,
+    tidyr,
+    data.table,
+    zip,
+	ParallelLogger,
+	magrittr,
+	dplyr,
+	gridExtra,
+	rvg,
+	jsonlite,
+  R.utils
+Suggests:
+    knitr,
+    rmarkdown,
+    DT,
+    reshape2,
+    tools,
+    plotly
+License: Apache License 2.0
+VignetteBuilder: knitr
+LazyData: TRUE
+RoxygenNote: 7.1.1
