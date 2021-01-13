@@ -32,8 +32,6 @@
 #' @param cohortTable          The name of the table that will be created in the work database schema.
 #'                             This table will hold the target population cohorts used in this
 #'                             study.
-#' @param cohortId             The ID of the target cohort                             
-#' @param outcomeId            The ID of the outcome cohort  
 #' @param oracleTempSchema     Should be used in Oracle to specify a schema where the user has write
 #'                             priviliges for storing temporary tables.
 #' @param outputFolder         Name of local folder to place results; make sure to use forward slashes
@@ -43,15 +41,10 @@
 #' @param repeats              How many test/train splits to run
 #' @param studyStartDate       Only cohort start dates after this date are included
 #' @param studyEndDate         Only cohort end dates before this date are included    
-#' @param validationSchemaTarget  The target pop schema if externally validating
-#' @param validationSchemaOutcome The outcome schema if externally validating 
-#' @param validationSchemaCdm  The cdm schema if externally validating  
-#' @param validationName       The name of the external database if externally validating 
-#' @param validationTableTarget The table containing the target cohort if externally validating 
-#' @param validationTableOutcome The table containing the outcome if externally validating       
 #' @param createCohorts        Create the cohortTable table with the target population and outcome cohorts?
 #' @param runAnalyses          Run the model development
 #' @param externalValdiate     Externally validate the models you developed
+#' @param summarizeResults     Summarise the results in the outputFolder for the cdmDatabaseName models  
 #' @param minCellCount         The minimum number of subjects contributing to a count before it can be included 
 #'                             in packaged results.
 #' @param verbosity            Sets the level of the verbosity. If the log level is at or higher in priority than the logger threshold, a message will print. The levels are:
@@ -77,8 +70,6 @@
 #'         cdmDatabaseName = 'shareable name of the database'
 #'         cohortDatabaseSchema = "study_results",
 #'         cohortTable = "cohort",
-#'         cohortId = 1,
-#'         outcomeId = 2,
 #'         oracleTempSchema = NULL,
 #'         outputFolder = "c:/temp/study_results", 
 #'         createCohorts = T,
@@ -100,21 +91,30 @@ execute <- function(connectionDetails,
                     repeats = 5,
                     studyStartDate = "20160101",
                     studyEndDate = "",
-                    validationSchemaTarget,
-                    validationSchemaOutcome, 
-                    validationSchemaCdm, 
-                    validationName, 
-                    validationTableTarget,
-                    validationTableOutcome,
                     createCohorts = T,
                     runAnalyses = T,
                     externalValidate = F,
+                    modelDatabaseName,
+                    summarizeResults,
                     minCellCount= 5,
                     verbosity = "INFO",
                     cdmVersion = 5) {
   
   
-  outputFolder <- file.path(outputFolder, 'CovariateLookBack', cdmDatabaseName)
+  if(runAnalyses && externalValidate){
+    stop('Must pick development or validation - cant pick both together')
+  }
+  
+  if(externalValidate){
+    if(missing(modelDatabaseName)){
+      stop('Must specify database to validate: modelDatabaseName')
+    }
+    outputFolder <- file.path(outputFolder, 'CovariateLookBack', modelDatabaseName)
+  } else{
+    outputFolder <- file.path(outputFolder, 'CovariateLookBack', cdmDatabaseName)
+  }
+  
+  
   if (!file.exists(outputFolder))
     dir.create(outputFolder, recursive = TRUE)
   
@@ -158,26 +158,45 @@ execute <- function(connectionDetails,
     internalResult <- runModels(outputFolder = outputFolder,
                          outcomeId = settings$outcomeId[k],
                          repeats = repeats,
-                         analysisId = paste0('Analysis_',k)
+                         analysisId = paste0('Analysis_',k),
+                         verbosity = verbosity
     )
     }
     
  
   }
   
-  if (externallyValdiated) {
-    ParallelLogger::logInfo("Externally Validating Models")
-    externalResult <- externalValidateModel(connectionDetails = connectionDetails,
-                                                        outputFolder = outputFolder,
-                                                        validationSchemaTarget = validationSchemaTarget,
-                                                        validationSchemaOutcome = validationSchemaOutcome, 
-                                                        validationSchemaCdm = validationSchemaCdm, 
-                                                        databaseNames = validationName, 
-                                                        validationTableTarget = validationTableTarget, 
-                                                        validationTableOutcome = validationTableOutcome, 
-                                                        validationIdTarget = cohortId,
-                                                        validationIdOutcome = outcomeId
-    )
+  if (externalValidate) {
+    
+    settings <- utils::read.csv(system.file("settings", "settings.csv", package = "PredictionCovariateLookback"))
+    
+    for(k in 1:nrow(settings)){
+      
+      if(dir.exists(file.path(outputFolder,'results', paste0('Analysis_',k)))){
+        ParallelLogger::logInfo(paste0("Externally Validating Models in ", paste0('Analysis_',k)))
+        
+        externalResult <- externalValidateModel(connectionDetails = connectionDetails,
+                                                outputFolder = outputFolder,
+                                                validationSchemaTarget = cohortDatabaseSchema,
+                                                validationSchemaOutcome = cohortDatabaseSchema, 
+                                                validationSchemaCdm = cdmDatabaseSchema, 
+                                                databaseNames = cdmDatabaseName, 
+                                                validationTableTarget = cohortTable, 
+                                                validationTableOutcome = cohortTable, 
+                                                validationIdTarget = settings$cohortId[1],
+                                                validationIdOutcome = settings$outcomeId[1],
+                                                analysisId = paste0('Analysis_',k),
+                                                oracleTempSchema = oracleTempSchema,
+                                                sampleSize = sampleSize
+        )
+      } else{
+        ParallelLogger::logInfo(paste0('Analysis ',k, ' has no results'))
+      }
+    }
+  }
+  
+  if(summarizeResults){
+    getSummary(outputFolder)
   }
   
   

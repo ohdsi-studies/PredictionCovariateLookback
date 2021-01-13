@@ -54,7 +54,8 @@ getData <- function(outputFolder,
 runModels <- function(outputFolder,
                       outcomeId,
                       repeats = 5,
-                      analysisId){
+                      analysisId,
+                      verbosity = "INFO"){
   #============================
   #step 2.a - create the repeats population splits  
   #============================
@@ -103,42 +104,48 @@ runModels <- function(outputFolder,
     outcomeId <- x$outcomeId
     aId <- x$aId
     
-    #plpDataNew <- PatientLevelPrediction::loadPlpData(indexFolder)
-    plpDataNew <- PatientLevelPrediction::loadPlpData(file.path(outputFolder,'data',aId, paste0('plpData_lookback_',abs(value))))
-    
-    # create the population
-    pops <- PatientLevelPrediction::createStudyPopulation(plpData = plpDataNew, 
-                                                          outcomeId = outcomeId, 
-                                                          riskWindowStart =  1,
-                                                          riskWindowEnd = 365, # is this correct? 
-                                                          requireTimeAtRisk = F, 
-                                                          removeSubjectsWithPriorOutcome = TRUE, #for acute we want to remove outcome in past 60 days?
-                                                          binary = TRUE)
-    
-    # load the test/train split so it is the same for each covariate setting 
-    splitInfo <- readRDS(file.path(outputFolder,'populations',aId, paste0('pop',n,'.rds')))
-    indexes <- merge(pops, splitInfo, by = c('subjectId','cohortStartDate'))[, c('rowId','index')]
-    md <- attr(pops, 'metaData')
-    pops <- merge(pops, splitInfo[,c('subjectId','cohortStartDate')], 
-                  by = c('subjectId','cohortStartDate'))
-    attr(pops, 'metaData') <- md
-    
-    # train the model and save everything
-    mod.lr = PatientLevelPrediction::runPlp(population = pops, 
-                    plpData = plpDataNew, 
-                    minCovariateFraction = 0.001,
-                    normalizeData = T,
-                    modelSettings = PatientLevelPrediction::setLassoLogisticRegression(seed = 453),
-                    indexes = indexes, 
-                    saveDirectory = file.path(outputFolder,'results',aId),
-                    savePlpData = F,
-                    savePlpResult = T,
-                    savePlpPlots = T,
-                    saveEvaluation = T,
-                    verbosity = "INFO",
-                    timeStamp = FALSE,
-                    analysisId = paste0('plpData_lookback_', abs(value),'_', n)
-                    )
+    # if there is data
+    if(dir.exists(file.path(outputFolder,'data',aId, paste0('plpData_lookback_',abs(value))))){
+      plpDataNew <- PatientLevelPrediction::loadPlpData(file.path(outputFolder,'data',aId, paste0('plpData_lookback_',abs(value))))
+      
+      # create the population
+      pops <- PatientLevelPrediction::createStudyPopulation(plpData = plpDataNew, 
+                                                            outcomeId = outcomeId, 
+                                                            riskWindowStart =  1,
+                                                            riskWindowEnd = 365, # is this correct? 
+                                                            requireTimeAtRisk = F, 
+                                                            removeSubjectsWithPriorOutcome = TRUE, #for acute we want to remove outcome in past 60 days?
+                                                            binary = TRUE)
+      
+      # load the test/train split so it is the same for each covariate setting 
+      splitInfo <- readRDS(file.path(outputFolder,'populations',aId, paste0('pop',n,'.rds')))
+      indexes <- merge(pops, splitInfo, by = c('subjectId','cohortStartDate'))[, c('rowId','index')]
+      md <- attr(pops, 'metaData')
+      pops <- merge(pops, splitInfo[,c('subjectId','cohortStartDate')], 
+                    by = c('subjectId','cohortStartDate'))
+      attr(pops, 'metaData') <- md
+      
+      # train the model and save everything
+      mod.lr = tryCatch({PatientLevelPrediction::runPlp(population = pops, 
+                                              plpData = plpDataNew, 
+                                              minCovariateFraction = 0.001,
+                                              normalizeData = T,
+                                              modelSettings = PatientLevelPrediction::setLassoLogisticRegression(seed = 453),
+                                              indexes = indexes, 
+                                              saveDirectory = file.path(outputFolder,'results',aId),
+                                              savePlpData = F,
+                                              savePlpResult = T,
+                                              savePlpPlots = T,
+                                              saveEvaluation = T,
+                                              verbosity = verbosity,
+                                              timeStamp = FALSE,
+                                              analysisId = paste0('plpData_lookback_', abs(value),'_', n))}, 
+                          error = function(e){ParallelLogger::logError(e); return(NULL)}
+  
+      )
+    } else {
+      ParallelLogger::logInfo(paste0('No data to load at ',file.path(outputFolder,'data',aId, paste0('plpData_lookback_',abs(value)))))
+    }
     
   } # end runPlpI
   
@@ -197,27 +204,143 @@ externalValidateModel <- function(connectionDetails,
                                   validationTableTarget,
                                   validationTableOutcome,
                                   validationIdTarget = 16631,
-                                  validationIdOutcome = 16474
+                                  validationIdOutcome = 16474,
+                                  analysisId,
+                                  n = 1,
+                                  oracleTempSchema,
+                                  sampleSize
 ){
   
   for (value in c(-730, -365, -180, -90, -30, -14))
   {
-    plpModelLoc <- file.path(...)
-    result <- PatientLevelPrediction::loadPlpResult(plpModelLoc)
-    valResults <- PatientLevelPrediction::externalValidatePlp(
-      plpResult = result, 
-      connectionDetails = connectionDetails,
-      validationSchemaTarget = validationSchemaTarget,
-      validationSchemaOutcome = validationSchemaOutcome,
-      validationSchemaCdm = validationSchemaCdm,
-      databaseNames = databaseNames,
-      validationTableTarget = validationTableTarget,
-      validationTableOutcome = validationTableOutcome ,
-      validationIdTarget = validationIdTarget,
-      validationIdOutcome = validationIdOutcome
-    )
+    plpModelLoc <- file.path(outputFolder, 'results', analysisId, paste0('plpData_lookback_',abs(value),'_', n), 'plpResult' )
+    result <- tryCatch({PatientLevelPrediction::loadPlpResult(plpModelLoc)},
+                       error = function(e){ParallelLogger::logError(e);return(NULL)})
     
-    
-    saveRDS(valResults, paste0(outputFolder,'external',  '/externalval_', abs(value),'_',n, '.rds'))
+    if(!is.null(result)){
+      valResults <- tryCatch({PatientLevelPrediction::externalValidatePlp(
+        plpResult = result, 
+        connectionDetails = connectionDetails,
+        validationSchemaTarget = validationSchemaTarget,
+        validationSchemaOutcome = validationSchemaOutcome,
+        validationSchemaCdm = validationSchemaCdm,
+        databaseNames = databaseNames,
+        validationTableTarget = validationTableTarget,
+        validationTableOutcome = validationTableOutcome ,
+        validationIdTarget = validationIdTarget,
+        validationIdOutcome = validationIdOutcome, 
+        oracleTempSchema = oracleTempSchema,
+        sampleSize = sampleSize
+      )}, error = function(e){ParallelLogger::logError(e);return(NULL)})
+      
+      if(!dir.exists(file.path(outputFolder,'external',databaseNames,analysisId))){
+        dir.create(file.path(outputFolder,'external',databaseNames,analysisId), recursive = T)
+      }
+      saveRDS(valResults, file.path(outputFolder,'external',databaseNames,analysisId,  paste0('externalval_', abs(value),'_',n, '.rds')))
+    }
   }
 }
+
+
+
+getSummary <- function(outputFolder){
+  
+  evRes <- c()
+  
+  dname <- strsplit(outputFolder, '/')[[1]]
+  dname <- dname[length(dname)]
+  
+  # get internal results:
+  analyses <- dir(file.path(outputFolder,'results'))
+  
+  for(analysis in analyses){
+    results <- dir(file.path(outputFolder,'results', analysis))
+
+    for(i in 1:length(results)) {
+      result <- PatientLevelPrediction::loadPlpResult(file.path(outputFolder,'results', analysis, results[i],'plpResult'))
+      
+      if(!is.null(result$performanceEvaluation)){
+        evResTemp <- as.data.frame(result$performanceEvaluation$evaluationStatistics)
+        evResTemp$Metric <- as.character(evResTemp$Metric)
+        evResTemp$analysisId <- as.character(evResTemp$analysisId)
+        evResTemp$Value <- as.numeric(as.character(evResTemp$Value))
+        evResTemp <- rbind(evResTemp,
+                           c(analysisId = evResTemp$analysisId[1],
+                             Eval = 'test',
+                             Metric = 'CovariateCount',
+                             Value = sum(result$covariateSummary$covariateValue!=0)))
+        
+        evResTemp$devData <- dname
+        evResTemp$valData <- dname
+        evResTemp$analysis <- analysis
+        
+        evRes <- rbind(evRes, evResTemp)
+      }
+    }
+  
+  }
+  
+  
+  # get val if there
+  valDatabases <- dir(file.path(outputFolder,'external'))
+  if(length(valDatabases)>0){
+    
+    for(valData in valDatabases){
+      analyses <- dir(file.path(outputFolder,'external',valData))
+      
+      for(analysis in analyses){
+        results <- dir(file.path(outputFolder,'external',valData, analysis))
+        
+        for(i in 1:length(results)) {
+          result <- readRDS(file.path(outputFolder,'external',valData, analysis, results[i]))
+          
+          evResTemp <- as.data.frame(result$validation[[1]]$performanceEvaluation$evaluationStatistics)
+          evResTemp$Metric <- as.character(evResTemp$Metric)
+          evResTemp$analysisId <- as.character(evResTemp$analysisId)
+          evResTemp$Value <- as.numeric(as.character(evResTemp$Value))
+          
+          evResTemp$devData <- dname
+          evResTemp$valData <- valData
+          evResTemp$analysis <- analysis
+          
+          evRes <- rbind(evRes, evResTemp)
+        }
+      }
+      
+    }
+    
+  } #end val
+  
+  evRes$rep <- sapply(1:nrow(evRes), function(i) strsplit(evRes$analysisId[i], '_')[[1]][4])
+  evRes$lookback <- sapply(1:nrow(evRes), function(i) strsplit(evRes$analysisId[i], '_')[[1]][3])
+  evRes$Value <- as.double(evRes$Value)
+  
+  # get AUC summary
+  aucSummary <- evRes %>% dplyr::filter(Eval %in% c('test','validation')) %>%
+    dplyr::filter(Metric == 'AUC.auc') %>% 
+    dplyr::group_by(analysis,devData,valData,lookback) %>% 
+    dplyr::summarise(auc = mean(Value), 
+                     sd = sd(Value),
+                     min = min(Value),
+                     max = max(Value),
+                     median = median(Value))
+  
+  ParallelLogger::logInfo(paste0('Saving AUC summary to: ', file.path(outputFolder, 'aucSummary.csv')))
+  write.csv(aucSummary, file.path(outputFolder, 'aucSummary.csv'))
+  
+  # get covariateCount summary
+  covCount <- evRes %>% dplyr::filter(Metric == 'CovariateCount') %>%
+    dplyr::group_by(analysis, devData, lookback) %>% 
+    dplyr::summarise(meanCovariates = mean(Value), 
+                     sd = sd(Value),
+                     min = min(Value),
+                     max = max(Value),
+                     median = median(Value)) 
+  
+  ParallelLogger::logInfo(paste0('Saving covariate count to: ', file.path(outputFolder, 'covCount.csv')))
+  write.csv(covCount, file.path(outputFolder, 'covCount.csv'))
+  
+  invisible(NULL)
+}
+
+

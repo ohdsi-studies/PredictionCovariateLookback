@@ -16,15 +16,11 @@ execute(
   repeats = 5,
   studyStartDate = "20160101",
   studyEndDate = "",
-  validationSchemaTarget,
-  validationSchemaOutcome,
-  validationSchemaCdm,
-  validationName,
-  validationTableTarget,
-  validationTableOutcome,
   createCohorts = T,
   runAnalyses = T,
   externalValidate = F,
+  modelDatabaseName,
+  summarizeResults,
   minCellCount = 5,
   verbosity = "INFO",
   cdmVersion = 5
@@ -64,21 +60,11 @@ performance.}
 
 \item{studyEndDate}{Only cohort end dates before this date are included}
 
-\item{validationSchemaTarget}{The target pop schema if externally validating}
-
-\item{validationSchemaOutcome}{The outcome schema if externally validating}
-
-\item{validationSchemaCdm}{The cdm schema if externally validating}
-
-\item{validationName}{The name of the external database if externally validating}
-
-\item{validationTableTarget}{The table containing the target cohort if externally validating}
-
-\item{validationTableOutcome}{The table containing the outcome if externally validating}
-
 \item{createCohorts}{Create the cohortTable table with the target population and outcome cohorts?}
 
 \item{runAnalyses}{Run the model development}
+
+\item{summarizeResults}{Summarise the results in the outputFolder for the cdmDatabaseName models}
 
 \item{minCellCount}{The minimum number of subjects contributing to a count before it can be included 
 in packaged results.}
@@ -94,10 +80,6 @@ in packaged results.}
 }}
 
 \item{cdmVersion}{The version of the common data model}
-
-\item{cohortId}{The ID of the target cohort}
-
-\item{outcomeId}{The ID of the outcome cohort}
 
 \item{externalValdiate}{Externally validate the models you developed}
 }
@@ -119,8 +101,6 @@ execute(connectionDetails,
         cdmDatabaseName = 'shareable name of the database'
         cohortDatabaseSchema = "study_results",
         cohortTable = "cohort",
-        cohortId = 1,
-        outcomeId = 2,
         oracleTempSchema = NULL,
         outputFolder = "c:/temp/study_results", 
         createCohorts = T,
