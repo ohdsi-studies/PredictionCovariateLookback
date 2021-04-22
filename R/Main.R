@@ -56,7 +56,8 @@
 #'                                         \item{ERROR}{Show error messages}
 #'                                         \item{FATAL}{Be silent except for fatal errors}
 #'                                         }                              
-#' @param cdmVersion           The version of the common data model                             
+#' @param cdmVersion           The version of the common data model  
+#' @param requiredPriorObservation     A sensitivity parameter (default is 365 days)                           
 #'
 #' @examples
 #' \dontrun{
@@ -76,7 +77,8 @@
 #'         runAnalyses = T,
 #'         minCellCount = 5,
 #'         verbosity = "INFO",
-#'         cdmVersion = 5)
+#'         cdmVersion = 5,
+#'         requiredPriorObservation = 365)
 #' }
 #'
 #' @export
@@ -98,7 +100,8 @@ execute <- function(connectionDetails,
                     summarizeResults,
                     minCellCount= 5,
                     verbosity = "INFO",
-                    cdmVersion = 5) {
+                    cdmVersion = 5,
+                    requiredPriorObservation = 365) {
   
   
   if(runAnalyses && externalValidate){
@@ -159,7 +162,8 @@ execute <- function(connectionDetails,
                          outcomeId = settings$outcomeId[k],
                          repeats = repeats,
                          analysisId = paste0('Analysis_',k),
-                         verbosity = verbosity
+                         verbosity = verbosity,
+                         requiredPriorObservation = requiredPriorObservation
     )
     }
     

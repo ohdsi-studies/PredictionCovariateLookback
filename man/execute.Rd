@@ -23,7 +23,8 @@ execute(
   summarizeResults,
   minCellCount = 5,
   verbosity = "INFO",
-  cdmVersion = 5
+  cdmVersion = 5,
+  requiredPriorObservation = 365
 )
 }
 \arguments{
@@ -81,6 +82,8 @@ in packaged results.}
 
 \item{cdmVersion}{The version of the common data model}
 
+\item{requiredPriorObservation}{A sensitivity parameter (default is 365 days)}
+
 \item{externalValdiate}{Externally validate the models you developed}
 }
 \description{
@@ -107,7 +110,8 @@ execute(connectionDetails,
         runAnalyses = T,
         minCellCount = 5,
         verbosity = "INFO",
-        cdmVersion = 5)
+        cdmVersion = 5,
+        requiredPriorObservation = 365)
 }
 
 }
