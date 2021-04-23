@@ -72,7 +72,7 @@ runModels <- function(outputFolder,
   for( i in 1:repeats){
     pops <- PatientLevelPrediction::createStudyPopulation(plpData=plpDataNew, 
                                                           outcomeId = outcomeId, 
-                                                          priorOutcomeLookback = requiredPriorObservation,
+                                                          washoutPeriod = requiredPriorObservation,
                                                           riskWindowStart =  1,
                                                           riskWindowEnd = 365, # is this correct? 
                                                           requireTimeAtRisk = F, 
@@ -113,7 +113,7 @@ runModels <- function(outputFolder,
       # create the population
       pops <- PatientLevelPrediction::createStudyPopulation(plpData = plpDataNew, 
                                                             outcomeId = outcomeId, 
-                                                            priorOutcomeLookback = requiredPriorObservation,
+                                                            washoutPeriod = requiredPriorObservation,
                                                             riskWindowStart =  1,
                                                             riskWindowEnd = 365, # is this correct? 
                                                             requireTimeAtRisk = F, 
